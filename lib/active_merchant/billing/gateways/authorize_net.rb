@@ -29,7 +29,6 @@ module ActiveMerchant #:nodoc:
       class_attribute :arb_test_url, :arb_live_url
 
       self.test_url = "https://test.authorize.net/gateway/transact.dll"
-      # TODO: Dinaymic live_url
       self.live_url = "https://secure.authorize.net/gateway/transact.dll"
 
       self.arb_test_url = 'https://apitest.authorize.net/xml/v1/request.api'
@@ -269,8 +268,11 @@ module ActiveMerchant #:nodoc:
 
         # Only activate the test_request when the :test option is passed in
         parameters[:test_request] = @options[:test] ? 'TRUE' : 'FALSE'
-
-        url = test? ? self.test_url : self.live_url
+        url = if test?
+          self.test_url
+        else
+          eprocessing_network? ? 'https://www.eprocessingnetwork.com/cgi-bin/an/transact.pl' : self.live_url
+        end
         data = ssl_post url, post_data(action, parameters)
 
         response          = parse(data)
@@ -720,6 +722,11 @@ module ActiveMerchant #:nodoc:
         else
           response[node.name.underscore.to_sym] = node.text
         end
+      end
+
+      # Are we using eProcessingNetwork Emulator?
+      def eprocessing_network?
+        (@options.has_key?(:eprocessing) ? @options[:eprocessing] : false)
       end
     end
   end
